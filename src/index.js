@@ -1,7 +1,8 @@
-const board = document.getElementById('board')
-const winningMessageElement = document.getElementById('winningMessage')
-const restartButton = document.getElementById('restartButton')
+const board = document.getElementById('board');
+const winningMessageElement = document.getElementById('winningMessage');
+const restartButton = document.getElementById('restartButton');
 
+const shuffle = require("lodash.shuffle");
 
 // data Suits = Diamond | Clubs | Hearts | Spades
 var SUITS = Object.freeze({
@@ -18,13 +19,6 @@ var CARD = Object.freeze({
     TURNED: -1,
 })
 
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-}
-
 function shuffleCards(players) {
     var cards = [];
 
@@ -34,8 +28,7 @@ function shuffleCards(players) {
         }
     }
 
-    shuffleArray(cards);
-    console.log(cards);
+    shuffle(cards);
 
     return cards;
 };
