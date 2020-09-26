@@ -1,0 +1,19 @@
+{
+  "name": "dragon-stairs",
+  "version": "1.0.0",
+  "description": "A multi-player card game based on building stairs",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/claudia223/dragon-stairs.git"
+  },
+  "author": "claudia223",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/claudia223/dragon-stairs/issues"
+  },
+  "homepage": "https://github.com/claudia223/dragon-stairs#readme"
+}
