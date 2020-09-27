@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/claudia223/dragon-stairs#readme",
   "dependencies": {
-    "lodash.shuffle": "^4.2.0"
+    "array-keyed-map": "^2.0.1",
+    "lodash": "^4.17.20"
   }
 }
