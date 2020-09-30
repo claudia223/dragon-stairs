@@ -7,7 +7,7 @@ var ENUM_2_SUIT = Object.fromEntries(
     L.zip(L.range(SUITS.size), Array.from(SUITS.values()))
 );
 
-class IntCardMap  {
+IntCardMap = class {
     constructor(size) {
         this.array = new Int8Array(size);
     }
@@ -29,7 +29,7 @@ class IntCardMap  {
     }
 
     keyCard(i) {
-        let num = i & 0xf;
+        let num = (i & 0xf) + 1;
         let suit = ENUM_2_SUIT[i >> 4];
 
         return [suit, num];
@@ -40,7 +40,11 @@ class IntCardMap  {
         return {
             *[Symbol.iterator]() {
                 for (let [i, v] of self.array.entries()) {
-                    yield [self.keyCard(i), v];
+                    let card = self.keyCard(i);
+
+                    if (card[1] <= N_CARDS) {
+                        yield [card, v];
+                    }
                 }
             },
         };
@@ -94,7 +98,7 @@ function nextPlayer(currentPlayer, totalPlayers) {
 
 function makeState(playerCards) {
     var limits = new Map();
-    var hands = new IntCardMap(L.sum(playerCards.map(x => x.length)));
+    var hands = new IntCardMap(16 * SUITS.size);
     var totalPlayers = playerCards.length;
     var firstCard = [SUITS.values().next().value, Math.ceil(N_CARDS / 2)];
     var [firstSuit, firstNum] = firstCard;
@@ -118,14 +122,11 @@ function makeState(playerCards) {
     }
 
     let currentPlayer = nextPlayer(hands.get(firstCard), totalPlayers);
-    let movesLeft = hands.size - 1;
+    let movesLeft = L.sumBy(playerCards, "length") - 1;
     hands.set(firstCard, 0);
 
     return { limits, hands, currentPlayer, totalPlayers, movesLeft };
 }
-
-var cards = shuffleCards(3);
-var state = makeState(cards);
 
 function playerCards(state, player) {
     const cards = [];
