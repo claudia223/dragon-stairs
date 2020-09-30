@@ -1,18 +1,15 @@
 var L = require('lodash');
 var ArrayKeyedMap = require('array-keyed-map');
-var { produce, enableMapSet } = require('immer');
-
-enableMapSet();
 
 // data Suits = Diamond | Clubs | Hearts | Spades
 var SUITS = new Map([
     ['DIAMONDS', 'A'],
     ['CLUBS', 'B'],
-    // HEARTS: "H",
-    // SPADES: "S"
+    // ['HEARTS', 'H'],
+    // ['SPADES', 'S'],
 ]);
 
-var N_CARDS = 5;
+var N_CARDS = 11;
 
 // data Card = Yes | No | Turned
 var CARD_STATE = Object.freeze({
@@ -30,8 +27,8 @@ function shuffleCards(players) {
         }
     }
 
-    const cards_per_player = cards.length / players;
     cards = L.shuffle(cards.slice(cards.length % players));
+    const cards_per_player = cards.length / players;
 
     return L.range(3).map((i) =>
         cards.slice(i * cards_per_player, (i + 1) * cards_per_player)
@@ -50,7 +47,7 @@ function makeState(playerCards) {
     var [firstSuit, firstNum] = firstCard;
 
     for (let suit of SUITS.values()) {
-        let limit = { end: [0, N_CARDS] };
+        let limit = { end: [1, N_CARDS] };
 
         if (suit === firstSuit) {
             limit.start = [firstNum - 1, firstNum + 1];
@@ -67,10 +64,11 @@ function makeState(playerCards) {
         }
     }
 
-    var currentPlayer = nextPlayer(hands.get(firstCard), totalPlayers);
+    let currentPlayer = nextPlayer(hands.get(firstCard), totalPlayers);
+    let movesLeft = hands.size - 1;
     hands.set(firstCard, 0);
 
-    return { limits, hands, currentPlayer, totalPlayers };
+    return { limits, hands, currentPlayer, totalPlayers, movesLeft };
 }
 
 var cards = shuffleCards(3);
@@ -108,7 +106,15 @@ function nextMoves(state) {
     }
 }
 
-var applyMove = produce((state, move) => {
+function cloneState(state) {
+    return {
+        ...state,
+        hands: new ArrayKeyedMap(state.hands),
+        limits: L.cloneDeep(state.limits),
+    };
+}
+
+function applyMoveMut(state, move) {
     let [suit, num] = move.card;
     let { start, end } = state.limits.get(suit);
 
@@ -141,18 +147,18 @@ var applyMove = produce((state, move) => {
     }
 
     state.currentPlayer = nextPlayer(state.currentPlayer, state.totalPlayers);
+    state.movesLeft = state.movesLeft - 1;
 
     return state;
-});
+}
+
+// var applyMove = produce(applyMoveMut);
+function applyMove(state, move) {
+    return applyMoveMut(cloneState(state), move);
+}
 
 function isFinalState(state) {
-    for (let p of state.hands.values()) {
-        if (p > 0) {
-            return false;
-        }
-    }
-
-    return true;
+    return state.movesLeft === 0;
 }
 
 function calculateScores(state) {
@@ -162,9 +168,9 @@ function calculateScores(state) {
         scores.set(i, 0);
     }
 
-    for (let [[_, num], p] of state.hands.entries()) {
-        if (p < 0) {
-            let p = -p;
+    for (let [[_, num], cardState] of state.hands.entries()) {
+        if (cardState < 0) {
+            let p = -cardState;
             scores.set(p, scores.get(p) + num);
         }
     }
@@ -172,6 +178,57 @@ function calculateScores(state) {
     return scores;
 }
 
+function stateScore(state, player) {
+    let scores = calculateScores(state);
+    let ownScore = scores.get(player);
+    let [_, bestScore] = L.minBy(Array.from(scores.entries()), ([p, s]) =>
+        p !== player ? s : Number.MAX_SAFE_INTEGER
+    );
+
+    return bestScore - ownScore;
+}
+
+function optimalMove(state, playerState) {
+    if (isFinalState(state)) {
+        return {
+            score: stateScore(state, Math.abs(playerState)),
+            card: null,
+        };
+    }
+
+    let optPlayer = Math.abs(playerState);
+    let nextPlayerState =
+        optPlayer == nextPlayer(state.currentPlayer, state.totalPlayers)
+            ? optPlayer
+            : -optPlayer;
+
+    let { action, cards } = nextMoves(state);
+    let optCard = null;
+    let optScore =
+        playerState > 0 ? -Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
+
+    for (let card of cards) {
+        let newState = applyMove(state, { action, card });
+        let { score } = optimalMove(newState, nextPlayerState);
+
+        if (playerState > 0) {
+            if (score > optScore) {
+                optCard = card;
+                optScore = score;
+            }
+        } else {
+            if (score < optScore) {
+                optCard = card;
+                optScore = score;
+            }
+        }
+    }
+
+    return { card: optCard, score: optScore };
+}
+
 var cards = shuffleCards(3);
 var state = makeState(cards);
+
+// optimalMove(state, state.currentPlayer)
 
