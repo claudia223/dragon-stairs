@@ -18,6 +18,7 @@
     "homepage": "https://github.com/claudia223/dragon-stairs#readme",
     "dependencies": {
         "array-keyed-map": "^2.0.1",
+        "immer": "^7.0.9",
         "lodash": "^4.17.20"
     },
     "prettier": {

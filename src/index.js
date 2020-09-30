@@ -1,5 +1,8 @@
 var L = require('lodash');
 var ArrayKeyedMap = require('array-keyed-map');
+var { produce, enableMapSet } = require('immer');
+
+enableMapSet();
 
 // data Suits = Diamond | Clubs | Hearts | Spades
 var SUITS = new Map([
@@ -105,7 +108,7 @@ function nextMoves(state) {
     }
 }
 
-function applyMove(state, move) {
+var applyMove = produce((state, move) => {
     let [suit, num] = move.card;
     let { start, end } = state.limits.get(suit);
 
@@ -140,7 +143,7 @@ function applyMove(state, move) {
     state.currentPlayer = nextPlayer(state.currentPlayer, state.totalPlayers);
 
     return state;
-}
+});
 
 function isFinalState(state) {
     for (let p of state.hands.values()) {
