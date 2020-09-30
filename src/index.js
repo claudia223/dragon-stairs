@@ -1,5 +1,58 @@
 var L = require('lodash');
-var ArrayKeyedMap = require('array-keyed-map');
+
+var SUIT_2_ENUM = Object.fromEntries(
+    L.zip(Array.from(SUITS.values()), L.range(SUITS.size))
+);
+var ENUM_2_SUIT = Object.fromEntries(
+    L.zip(L.range(SUITS.size), Array.from(SUITS.values()))
+);
+
+class IntCardMap  {
+    constructor(size) {
+        this.array = new Int8Array(size);
+    }
+
+    get(key) {
+        return this.array[this.cardKey(key)];
+    }
+
+    set(key, value) {
+        this.array[this.cardKey(key)] = value;
+    }
+
+    get size() {
+        return this.array.length;
+    }
+
+    cardKey([suit, num]) {
+        return (SUIT_2_ENUM[suit] << 4) | (num - 1);
+    }
+
+    keyCard(i) {
+        let num = i & 0xf;
+        let suit = ENUM_2_SUIT[i >> 4];
+
+        return [suit, num];
+    }
+
+    entries() {
+        const self = this;
+        return {
+            *[Symbol.iterator]() {
+                for (let [i, v] of self.array.entries()) {
+                    yield [self.keyCard(i), v];
+                }
+            },
+        };
+    }
+
+    clone() {
+        let c = new this.constructor(this.array.length);
+        c.array.set(this.array);
+
+        return c;
+    }
+};
 
 // data Suits = Diamond | Clubs | Hearts | Spades
 var SUITS = new Map([
@@ -41,7 +94,7 @@ function nextPlayer(currentPlayer, totalPlayers) {
 
 function makeState(playerCards) {
     var limits = new Map();
-    var hands = new ArrayKeyedMap();
+    var hands = new IntCardMap(L.sum(playerCards.map(x => x.length)));
     var totalPlayers = playerCards.length;
     var firstCard = [SUITS.values().next().value, Math.ceil(N_CARDS / 2)];
     var [firstSuit, firstNum] = firstCard;
@@ -109,7 +162,7 @@ function nextMoves(state) {
 function cloneState(state) {
     return {
         ...state,
-        hands: new ArrayKeyedMap(state.hands),
+        hands: state.hands.clone(),
         limits: L.cloneDeep(state.limits),
     };
 }
@@ -188,6 +241,7 @@ function stateScore(state, player) {
     return bestScore - ownScore;
 }
 
+// optimalMove :: State -> Player -> Move
 function optimalMove(state, playerState) {
     if (isFinalState(state)) {
         return {
