@@ -108,7 +108,6 @@ function nextMoves(state) {
 function applyMove(state, move) {
     let [suit, num] = move.card;
     let { start, end } = state.limits.get(suit);
-    //var state1 = state;
 
     switch (move.action) {
         case 'play':
@@ -143,9 +142,9 @@ function applyMove(state, move) {
     return state;
 }
 
-function isFinalState(state){
-    for(let p of state.hands.values()){
-        if(p > 0){
+function isFinalState(state) {
+    for (let p of state.hands.values()) {
+        if (p > 0) {
             return false;
         }
     }
@@ -153,18 +152,20 @@ function isFinalState(state){
     return true;
 }
 
-function score(state){
+function calculateScores(state) {
     var scores = new Map();
 
-    for (var i = 1; i <= state.totalPlayers; i++ ){
-        scores.set(i,0);
+    for (var i = 1; i <= state.totalPlayers; i++) {
+        scores.set(i, 0);
     }
-    for(let p of state.hands.values()){
-        if(p < 0){
-            var value = state.hands.values();
-            scores.set(-(value), scores.get(-value) + state.hands.entries[1]);
-         }
+
+    for (let [[_, num], p] of state.hands.entries()) {
+        if (p < 0) {
+            let p = -p;
+            scores.set(p, scores.get(p) + num);
+        }
     }
+
     return scores;
 }
 
