@@ -159,7 +159,7 @@ IntLimits = class {
     }
 };
 
-function makeCards(){
+function makeCards() {
     var cards = [];
 
     for (var i = 1; i <= N_CARDS; i++) {
@@ -170,16 +170,14 @@ function makeCards(){
     return cards;
 }
 
-
-function shuffleCards(players, cards) {
-    cards = L.shuffle(cards.slice(cards.length % players));
+function shuffleCards(cards, players) {
+    var randCards = L.shuffle(cards.slice(cards.length % players));
     const cards_per_player = cards.length / players;
 
     return L.range(3).map((i) =>
-        cards.slice(i * cards_per_player, (i + 1) * cards_per_player)
+        randCards.slice(i * cards_per_player, (i + 1) * cards_per_player)
     );
 }
-
 
 function nextPlayer(currentPlayer, totalPlayers) {
     return (currentPlayer % totalPlayers) + 1;
@@ -375,11 +373,18 @@ function optimalMove(state, playerState) {
 
     return { card: optCard, score: optScore };
 }
-var cards = makeCards();
-cards = shuffleCards(3, cards);
+
+var allCards = makeCards();
+var cards = shuffleCards(allCards, 3);
 var state = makeState(cards);
 
-// optimalMove(state, state.currentPlayer)
-
-module.exports = {shuffleCards, makeCards, nextPlayer, makeState, playerCards};
+module.exports = {
+    shuffleCards,
+    makeCards,
+    nextPlayer,
+    makeState,
+    playerCards,
+    optimalMove,
+    calculateScores,
+};
 
