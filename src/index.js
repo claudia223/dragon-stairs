@@ -1,5 +1,22 @@
 var L = require('lodash');
 
+// data Suits = Diamond | Clubs | Hearts | Spades
+var SUITS = new Map([
+    ['DIAMONDS', 'A'],
+    ['CLUBS', 'B'],
+    // ['HEARTS', 'H'],
+    // ['SPADES', 'S'],
+]);
+
+var N_CARDS = 11;
+
+// data Card = Yes | No | Turned
+var CARD_STATE = Object.freeze({
+    YES: 1,
+    NO: 0,
+    TURNED: -1,
+});
+
 var SUIT_2_ENUM = Object.fromEntries(
     L.zip(Array.from(SUITS.values()), L.range(SUITS.size))
 );
@@ -35,6 +52,39 @@ IntCardMap = class {
         return [suit, num];
     }
 
+    playerCards(player) {
+        let cards = [];
+
+        for (let i = 0; i < this.array.length; i++) {
+            let card = this.keyCard(i);
+
+            if (card[1] <= N_CARDS && this.array[i] == player) {
+                cards.push(card);
+            }
+        }
+
+        return cards;
+    }
+
+    calculateScores(totalPlayers) {
+        var scores = new Map();
+
+        for (var i = 1; i <= totalPlayers; i++) {
+            scores.set(i, 0);
+        }
+
+        for (let i = 0; i < this.array.length; i++) {
+            let cardState = this.array[i];
+            if (cardState < 0) {
+                let p = -cardState;
+                let num = this.keyCard(i)[1];
+                scores.set(p, scores.get(p) + num);
+            }
+        }
+
+        return scores;
+    }
+
     entries() {
         const self = this;
         return {
@@ -58,22 +108,56 @@ IntCardMap = class {
     }
 };
 
-// data Suits = Diamond | Clubs | Hearts | Spades
-var SUITS = new Map([
-    ['DIAMONDS', 'A'],
-    ['CLUBS', 'B'],
-    // ['HEARTS', 'H'],
-    // ['SPADES', 'S'],
-]);
+IntLimits = class {
+    constructor(size) {
+        this.array = new Int8Array(size);
+    }
 
-var N_CARDS = 11;
+    set(suit, inner, outer) {
+        let offset = this.suitIndex(suit);
+        this.array[offset + 0] = inner[0];
+        this.array[offset + 1] = inner[1];
+        this.array[offset + 2] = outer[0];
+        this.array[offset + 3] = outer[1];
+    }
 
-// data Card = Yes | No | Turned
-var CARD_STATE = Object.freeze({
-    YES: 1,
-    NO: 0,
-    TURNED: -1,
-});
+    get(suit) {
+        let offset = this.suitIndex(suit);
+        return {
+            inner: [this.array[offset + 0], this.array[offset + 1]],
+            outer: [this.array[offset + 2], this.array[offset + 3]],
+        };
+    }
+
+    clone() {
+        let c = new this.constructor(this.array.length);
+        c.array.set(this.array);
+        return c;
+    }
+
+    innerEntries() {
+        const self = this;
+
+        return {
+            *[Symbol.iterator]() {
+                for (let offset = 0; offset <= self.array.length; offset += 4) {
+                    let suit = self.suitName(offset);
+                    let innerStart = self.array[offset + 0];
+                    let innerEnd = self.array[offset + 1];
+                    yield [suit, [innerStart, innerEnd]];
+                }
+            },
+        };
+    }
+
+    suitIndex(suit) {
+        return SUIT_2_ENUM[suit] << 2;
+    }
+
+    suitName(index) {
+        return ENUM_2_SUIT[index >> 2];
+    }
+};
 
 function shuffleCards(players) {
     var cards = [];
@@ -97,22 +181,23 @@ function nextPlayer(currentPlayer, totalPlayers) {
 }
 
 function makeState(playerCards) {
-    var limits = new Map();
+    var limits = new IntLimits(4 * SUITS.size);
     var hands = new IntCardMap(16 * SUITS.size);
     var totalPlayers = playerCards.length;
     var firstCard = [SUITS.values().next().value, Math.ceil(N_CARDS / 2)];
     var [firstSuit, firstNum] = firstCard;
 
     for (let suit of SUITS.values()) {
-        let limit = { end: [1, N_CARDS] };
+        let outer = [1, N_CARDS];
+        let inner;
 
         if (suit === firstSuit) {
-            limit.start = [firstNum - 1, firstNum + 1];
+            inner = [firstNum - 1, firstNum + 1];
         } else {
-            limit.start = [firstNum, firstNum];
+            inner = [firstNum, firstNum];
         }
 
-        limits.set(suit, limit);
+        limits.set(suit, inner, outer);
     }
 
     for (let [i, cards] of playerCards.entries()) {
@@ -122,7 +207,7 @@ function makeState(playerCards) {
     }
 
     let currentPlayer = nextPlayer(hands.get(firstCard), totalPlayers);
-    let movesLeft = L.sumBy(playerCards, "length") - 1;
+    let movesLeft = L.sumBy(playerCards, 'length') - 1;
     hands.set(firstCard, 0);
 
     return { limits, hands, currentPlayer, totalPlayers, movesLeft };
@@ -141,20 +226,23 @@ function playerCards(state, player) {
 }
 
 function nextMoves(state) {
-    var { limits, hands, currentPlayer } = state;
-    cards = [];
+    let { limits, hands, currentPlayer } = state;
+    let cards = [];
 
-    for (let [suit, { start }] of limits.entries()) {
-        for (let num of start) {
+    for (let i = 0; i < limits.array.length; i += 4) {
+        let suit = limits.suitName(i);
+        for (let j = 0; j < 2; j++) {
+            let num = limits.array[i + j];
             let card = [suit, num];
-            if (!isNaN(num) && hands.get(card) === currentPlayer) {
+
+            if (num > 0 && hands.get(card) === currentPlayer) {
                 cards.push(card);
             }
         }
     }
 
     if (L.isEmpty(cards)) {
-        return { action: 'turn', cards: playerCards(state, currentPlayer) };
+        return { action: 'turn', cards: hands.playerCards(currentPlayer) };
     } else {
         return { action: 'play', cards };
     }
@@ -164,35 +252,35 @@ function cloneState(state) {
     return {
         ...state,
         hands: state.hands.clone(),
-        limits: L.cloneDeep(state.limits),
+        limits: state.limits.clone(),
     };
 }
 
 function applyMoveMut(state, move) {
     let [suit, num] = move.card;
-    let { start, end } = state.limits.get(suit);
+    let { inner, outer } = state.limits.get(suit);
 
     switch (move.action) {
         case 'play':
-            let [min, max] = start;
+            let [min, max] = inner;
 
             state.hands.set(move.card, 0);
 
             if (num === min) {
-                start[0] = min === end[0] ? NaN : min - 1;
+                inner[0] = min === outer[0] ? -1 : min - 1;
             } else if (num === max) {
-                start[1] = max === end[1] ? NaN : max + 1;
+                inner[1] = max === outer[1] ? -1 : max + 1;
             } else if (min === max) {
-                start[0] = min === end[0] ? NaN : min - 1;
-                start[1] = max === end[1] ? NaN : max + 1;
+                inner[0] = min === outer[0] ? -1 : min - 1;
+                inner[1] = max === outer[1] ? -1 : max + 1;
             }
 
             break;
         case 'turn':
-            if (num < start[0]) {
-                end[0] = num;
-            } else if (num > start[1]) {
-                end[1] = num;
+            if (num < inner[0]) {
+                outer[0] = num;
+            } else if (num > inner[1]) {
+                outer[1] = num;
             }
 
             state.hands.set(move.card, -state.currentPlayer);
@@ -200,6 +288,7 @@ function applyMoveMut(state, move) {
             break;
     }
 
+    state.limits.set(suit, inner, outer);
     state.currentPlayer = nextPlayer(state.currentPlayer, state.totalPlayers);
     state.movesLeft = state.movesLeft - 1;
 
@@ -233,7 +322,7 @@ function calculateScores(state) {
 }
 
 function stateScore(state, player) {
-    let scores = calculateScores(state);
+    let scores = state.hands.calculateScores(state.totalPlayers);
     let ownScore = scores.get(player);
     let [_, bestScore] = L.minBy(Array.from(scores.entries()), ([p, s]) =>
         p !== player ? s : Number.MAX_SAFE_INTEGER
