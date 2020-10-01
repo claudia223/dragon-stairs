@@ -10,11 +10,10 @@ function secondsUnits(s) {
 }
 
 var suite = new Benchmark.Suite({
-    maxTime: 1,
+    maxTime: 1.0,
 });
 
-var allCards = S.makeCards();
-var cards = S.shuffleCards(allCards, 3);
+var cards = require('./cards');
 var state = S.makeState(cards);
 
 suite.add('optimalMove', () => {
