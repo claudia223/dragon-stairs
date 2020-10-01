@@ -217,15 +217,7 @@ function makeState(playerCards) {
 }
 
 function playerCards(state, player) {
-    const cards = [];
-
-    for (let [card, cardPlayer] of state.hands.entries()) {
-        if (cardPlayer === player) {
-            cards.push(card);
-        }
-    }
-
-    return cards;
+    return state.hands.playerCards(player);
 }
 
 function nextMoves(state) {
@@ -298,7 +290,6 @@ function applyMoveMut(state, move) {
     return state;
 }
 
-// var applyMove = produce(applyMoveMut);
 function applyMove(state, move) {
     return applyMoveMut(cloneState(state), move);
 }
@@ -308,20 +299,7 @@ function isFinalState(state) {
 }
 
 function calculateScores(state) {
-    var scores = new Map();
-
-    for (var i = 1; i <= state.totalPlayers; i++) {
-        scores.set(i, 0);
-    }
-
-    for (let [[_, num], cardState] of state.hands.entries()) {
-        if (cardState < 0) {
-            let p = -cardState;
-            scores.set(p, scores.get(p) + num);
-        }
-    }
-
-    return scores;
+    state.hands.calculateScores(state.totalPlayers);
 }
 
 function stateScore(state, player) {
