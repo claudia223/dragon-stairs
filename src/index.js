@@ -159,7 +159,7 @@ IntLimits = class {
     }
 };
 
-function shuffleCards(players) {
+function makeCards(){
     var cards = [];
 
     for (var i = 1; i <= N_CARDS; i++) {
@@ -167,7 +167,11 @@ function shuffleCards(players) {
             cards.push([suit, i]);
         }
     }
+    return cards;
+}
 
+
+function shuffleCards(players, cards) {
     cards = L.shuffle(cards.slice(cards.length % players));
     const cards_per_player = cards.length / players;
 
@@ -175,6 +179,7 @@ function shuffleCards(players) {
         cards.slice(i * cards_per_player, (i + 1) * cards_per_player)
     );
 }
+
 
 function nextPlayer(currentPlayer, totalPlayers) {
     return (currentPlayer % totalPlayers) + 1;
@@ -370,9 +375,11 @@ function optimalMove(state, playerState) {
 
     return { card: optCard, score: optScore };
 }
-
-var cards = shuffleCards(3);
+var cards = makeCards();
+cards = shuffleCards(3, cards);
 var state = makeState(cards);
 
 // optimalMove(state, state.currentPlayer)
+
+module.exports = {shuffleCards, makeCards, nextPlayer, makeState, playerCards};
 
