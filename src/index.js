@@ -1,7 +1,7 @@
 var S = require('./state');
 var { optimalMove } = require('./optimal');
 
-var allCards = S.makeCards(2, 11);
+var allCards = S.makeCards(3, 7);
 var cards = S.shuffleCards(allCards, 3);
 var state = S.makeState(cards);
 

@@ -117,8 +117,7 @@ function makeState(shuffled) {
     let cardBits = Math.ceil(Math.log2(numCards));
 
     let handsOffset = 4 + 4 * numSuits;
-    let handsLength = numSuits * (1 << cardBits);
-    let stateLength = handsOffset + handsLength;
+    let stateLength = handsOffset + (maxCard + 1);
 
     let state = new Int8Array(stateLength);
 
@@ -162,11 +161,10 @@ function playerCards(state, player) {
 
     let numSuits = getNumSuits(state);
     let numCards = getNumCards(state);
-    let cardBits = Math.ceil(Math.log2(numCards));
 
     for (let suit = 0; suit < numSuits; suit++) {
         for (let num = 0; num < numCards; num++) {
-            let card = (suit << cardBits) + num;
+            let card = (suit << 4) + num;
 
             if (getHand(state, card) == player) {
                 cards.push(card);
@@ -234,12 +232,9 @@ function logState(state) {
                 ];
             })
         ),
-        hands: L.omit(
-            L.mapValues(
-                L.groupBy(cards, (x) => x[1]),
-                (cs) => cs.map((c) => c[0])
-            ),
-            '0'
+        hands: L.mapValues(
+            L.groupBy(cards, (x) => x[1]),
+            (cs) => cs.map((c) => c[0])
         ),
         cards,
     };
