@@ -10,9 +10,14 @@ function isFinalState(state) {
 function stateScore(state, player) {
     let scores = S.calculateScores(state);
     let ownScore = scores.get(player);
-    let [_, bestScore] = L.minBy(Array.from(scores.entries()), ([p, s]) =>
-        p !== player ? s : Number.MAX_SAFE_INTEGER
-    );
+    let bestScore = Number.MAX_SAFE_INTEGER;
+
+    for(let p = 1; p < scores.size; p++){
+        let score = scores.get(p);
+        if(p !== player && score < bestScore){
+            bestScore = score;
+        }
+    }
 
     return bestScore - ownScore;
 }
